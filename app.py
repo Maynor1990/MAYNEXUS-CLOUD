@@ -11,77 +11,117 @@ cloudinary.config(
   secure = True
 )
 
-st.set_page_config(page_title="MAYNEXUS TURBO", layout="wide")
+st.set_page_config(page_title="MAYNEXUS QUANTUM", layout="wide")
 
-# --- CSS OPTIMIZADO (Menos animaciones pesadas) ---
+# --- CSS: OPTIMIZACIÓN TOTAL ---
 st.markdown("""
     <style>
     .stApp { background-color: #000; color: #fff; }
-    .turbo-line {
-        height: 4px; width: 100%;
+    
+    /* Barra de onda profesional minimalista */
+    .quantum-line {
+        height: 3px; width: 100%;
         background: linear-gradient(90deg, #00ff99, #0066ff, #00ff99);
         background-size: 200% 100%;
-        animation: wave 3s linear infinite;
-        margin-bottom: 20px;
+        animation: wave 4s linear infinite;
+        margin-bottom: 15px;
     }
     @keyframes wave { 0% {background-position:0%} 100% {background-position:100%} }
-    .song-card { background: #0a0a0a; border-radius: 12px; padding: 10px; border: 1px solid #1a1a1a; }
-    .cover-art { width: 100%; aspect-ratio: 1/1; border-radius: 8px; object-fit: cover; }
+
+    /* Tarjetas ultra ligeras */
+    .song-card { 
+        background: #080808; 
+        border-radius: 10px; 
+        padding: 8px; 
+        border: 1px solid #111;
+        transition: 0.2s;
+    }
+    .song-card:hover { border-color: #00ff99; background: #111; }
+    
+    /* Imagen fija para evitar saltos de pantalla */
+    .cover-art { 
+        width: 100%; 
+        aspect-ratio: 1/1; 
+        border-radius: 6px; 
+        object-fit: cover; 
+    }
+    
+    /* Texto pequeño para ahorrar espacio */
+    .song-info { font-size: 11px; font-weight: 500; color: #eee; margin-top: 5px; height: 28px; overflow: hidden; }
     </style>
-    <div class="turbo-line"></div>
+    <div class="quantum-line"></div>
     """, unsafe_allow_html=True)
 
-# --- FUNCIÓN CON CACHÉ (ESTO EVITA QUE SE TRABE) ---
-@st.cache_data(ttl=600)  # Guarda la lista por 10 minutos
-def cargar_biblioteca_global():
+# --- CACHÉ DE DATOS (Optimización de Almacén) ---
+@st.cache_data(ttl=600)
+def fetch_global_data():
     try:
-        # Traer audios
+        # Traer todo de la raíz
         res_audio = cloudinary.api.resources(resource_type="video", max_results=500)
         audios = res_audio.get('resources', [])
-        # Traer imágenes
         res_img = cloudinary.api.resources(resource_type="image", max_results=500)
         imagenes = {img['public_id'].split('/')[-1]: img['secure_url'] for img in res_img.get('resources', [])}
         return audios, imagenes
     except:
         return [], {}
 
-# --- LÓGICA PRINCIPAL ---
-audios, imagenes = cargar_biblioteca_global()
+# CARGA INICIAL
+audios, imagenes = fetch_global_data()
+
+# --- REPRODUCTOR FIJO (En la parte superior) ---
+if 'current_song' not in st.session_state:
+    st.session_state.current_song = None
 
 with st.sidebar:
     st.title("MAYNEXUS ⚡")
-    st.subheader("Control de Flujo")
-    if st.button("🚀 LIMPIAR CACHÉ (Nuevas descargas)"):
+    if st.button("🔄 RECARGAR NUBE"):
         st.cache_data.clear()
         st.rerun()
     st.markdown("---")
-    st.caption(f"Archivos en sistema: {len(audios)}")
+    st.caption("v22.0 Quantum Flow")
+    st.caption("Inspector: Maynor Vazquez")
 
-# BUSCADOR (Ahora es instantáneo porque busca en la lista local)
-query = st.text_input("🔍 Busca artista o canción (Peso Pluma, Sad, etc)...", "").lower()
+# ÁREA DE REPRODUCCIÓN (Solo se activa si eliges una canción)
+if st.session_state.current_song:
+    st.markdown("### 🎧 Reproduciendo Ahora")
+    c1, c2 = st.columns([1, 4])
+    with c1:
+        img_url = imagenes.get(st.session_state.current_song['public_id'].split('/')[-1], "https://via.placeholder.com/150/111/00ff99")
+        st.image(img_url, width=100)
+    with c2:
+        st.write(f"**{st.session_state.current_song['public_id'].split('/')[-1]}**")
+        st.audio(st.session_state.current_song['secure_url'], autoplay=True)
+    st.markdown("---")
+
+# --- BUSCADOR Y GALERÍA ---
+query = st.text_input("🔍 Buscar en biblioteca global...", "").lower()
 
 if audios:
-    # Filtrado ultra-rápido en memoria
-    if query:
-        resultados = [c for c in audios if query in c['public_id'].lower()]
-    else:
-        # Si no hay búsqueda, solo mostramos 20 al azar para no saturar
-        resultados = audios[:25]
-
-    st.write(f"Resultados: {len(resultados)}")
+    # Filtramos solo por texto (rápido)
+    resultados = [c for c in audios if query in c['public_id'].lower()] if query else audios
+    
+    # Mostramos máximo 40 para que el cel no sufra
+    lista_final = resultados[:40]
+    
+    st.write(f"Viendo {len(lista_final)} de {len(resultados)} canciones")
     
     cols = st.columns(5)
-    for i, cancion in enumerate(resultados):
+    for i, cancion in enumerate(lista_final):
         with cols[i % 5]:
             nombre = cancion['public_id'].split('/')[-1]
             foto = imagenes.get(nombre, "https://via.placeholder.com/300/111/00ff99?text=♫")
             
+            # Tarjeta visual
             st.markdown(f'''
                 <div class="song-card">
                     <img src="{foto}" class="cover-art">
-                    <p style="font-size:11px; font-weight:bold; height:25px; overflow:hidden;">{nombre[:35]}</p>
+                    <div class="song-info">{nombre[:30]}</div>
                 </div>
             ''', unsafe_allow_html=True)
-            st.audio(cancion['secure_url'])
+            
+            # Botón de acción para cargar la canción (Esto es lo que ahorra RAM)
+            if st.button(f"▶️ Sonar", key=f"play_{i}"):
+                st.session_state.current_song = cancion
+                st.rerun()
 else:
-    st.warning("Iniciando sistema... si no ves nada, dale al botón de 'Limpiar Caché'.")
+    st.warning("No hay datos. Asegúrate de que tus archivos estén en la raíz de Cloudinary.")
