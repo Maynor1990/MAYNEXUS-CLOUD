@@ -2,7 +2,7 @@ import streamlit as st
 import cloudinary
 import cloudinary.api
 
-# --- CONFIGURACIÓN DE TUS LLAVES ---
+# --- CONFIGURACIÓN DE CONEXIÓN (Tus llaves reales) ---
 cloudinary.config( 
   cloud_name = "detprbdvv", 
   api_key = "487844675958599", 
@@ -10,39 +10,73 @@ cloudinary.config(
   secure = True
 )
 
-# --- ESTO REEMPLAZA AL HTML (Diseño Visual) ---
-st.set_page_config(page_title="MAYNEXUS CLOUD", page_icon="☁️")
+# --- CONFIGURACIÓN VISUAL ---
+st.set_page_config(page_title="MAYNEXUS CLOUD", page_icon="🎵", layout="wide")
 
+# Estilo Dark Mode con bordes verde neón
 st.markdown("""
     <style>
-    /* Fondo negro y letras verdes estilo industrial */
     .stApp { background-color: #000000; color: #00ff99; }
-    h1 { color: #00ff99; text-align: center; border-bottom: 2px solid #00ff99; }
-    .stAudio { background-color: #111; border-radius: 10px; }
+    .stSelectbox label { color: #00ff99 !important; font-size: 20px; }
+    h1 { text-align: center; color: #00ff99; text-shadow: 2px 2px #000; border-bottom: 2px solid #00ff99; }
+    .song-card {
+        background-color: #111;
+        padding: 15px;
+        border-radius: 15px;
+        border: 1px solid #333;
+        margin-bottom: 25px;
+        text-align: center;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("MAYNEXUS CLOUD ☁️")
-st.write("Bienvenido, Mynor. Selecciona tu estación:")
+st.title("MAYNEXUS CLOUD ☁️🎵")
 
-# --- LISTA DE TUS CARPETAS EN CLOUDINARY ---
-genero = st.selectbox("", ["corridos tumbados", "Regueton", "bandas", "cristianas", "pop latino"])
+# --- SELECTOR DE CARPETAS ---
+# Asegúrate de que estos nombres sean iguales a tus carpetas en Cloudinary
+opciones = ["corridos tumbados", "Regueton", "bandas", "cristianas", "pop latino"]
+genero_elegido = st.selectbox("📂 SELECCIONA TU BIBLIOTECA:", opciones)
 
-if st.button("🎵 ACTUALIZAR REPRODUCTOR"):
-    # Buscamos los archivos en la nube
+st.markdown("---")
+
+if st.button("🔄 SINCRONIZAR CON LA NUBE"):
     try:
-        recursos = cloudinary.api.resources(type="upload", prefix=genero, resource_type="video")
+        # 1. Buscamos los archivos de audio en la carpeta seleccionada
+        # Usamos 'prefix' para que solo traiga lo de esa carpeta
+        recursos = cloudinary.api.resources(
+            type="upload", 
+            prefix=genero_elegido, 
+            resource_type="video", 
+            max_results=100
+        )
         
         if not recursos['resources']:
-            st.warning("No hay música en esta carpeta todavía.")
+            st.warning(f"No hay canciones en la carpeta '{genero_elegido}' aún.")
         else:
-            for cancion in recursos['resources']:
-                # Mostramos el nombre y el reproductor
-                nombre = cancion['public_id'].split('/')[-1]
-                st.markdown(f"### 🎧 {nombre}")
-                st.audio(cancion['secure_url'])
-                st.markdown("---")
+            st.success(f"Cargando {len(recursos['resources'])} canciones...")
+            
+            # 2. Creamos una rejilla de 2 columnas para las tarjetas
+            cols = st.columns(2)
+            
+            for i, cancion in enumerate(recursos['resources']):
+                with cols[i % 2]:
+                    # Limpiamos el nombre (quitamos la ruta de la carpeta)
+                    nombre_id = cancion['public_id'].split('/')[-1]
+                    
+                    # Generamos la URL de la portada (cambiamos .mp3 por .jpg)
+                    # Esto funciona porque el descargador sube ambos con el mismo nombre
+                    url_audio = cancion['secure_url']
+                    url_portada = url_audio.replace(".mp3", ".jpg")
+                    
+                    # Dibujamos la tarjeta
+                    st.markdown('<div class="song-card">', unsafe_allow_html=True)
+                    st.image(url_portada, use_column_width=True, caption="MAYNEXUS Art")
+                    st.markdown(f"### 🎧 {nombre_id}")
+                    st.audio(url_audio)
+                    st.markdown('</div>', unsafe_allow_html=True)
+                    
     except Exception as e:
-        st.error(f"Error al conectar con la nube: {e}")
+        st.error(f"Error al conectar con Cloudinary: {e}")
 
-st.caption("MAYNEXUS v1.0 | Sin túneles, 100% Nube")
+st.sidebar.markdown("---")
+st.sidebar.info("MAYNEXUS v1.5\nSistema de Gestión de Medios Industrial")
