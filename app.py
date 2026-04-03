@@ -2,7 +2,7 @@ import streamlit as st
 import cloudinary
 import cloudinary.api
 
-# --- CONFIGURACIÓN ---
+# --- CONFIGURACIÓN DE CONEXIÓN ---
 cloudinary.config( 
   cloud_name = "detprbdvv", 
   api_key = "487844675958599", 
@@ -10,11 +10,15 @@ cloudinary.config(
   secure = True
 )
 
+# --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="MAYNEXUS CLOUD", page_icon="🎵", layout="wide")
 
+# Diseño Industrial Dark Mode
 st.markdown("""
     <style>
     .stApp { background-color: #000000; color: #00ff99; }
+    .stSelectbox label { color: #00ff99 !important; font-size: 18px; font-weight: bold; }
+    h1 { text-align: center; color: #00ff99; text-shadow: 2px 2px #000; border-bottom: 2px solid #00ff99; }
     .song-card {
         background-color: #111;
         padding: 15px;
@@ -29,48 +33,70 @@ st.markdown("""
 
 st.title("MAYNEXUS CLOUD ☁️🎵")
 
-opciones = ["corridos tumbados", "Regueton", "bandas", "cristianas", "pop latino"]
+# --- SELECTOR DE CARPETAS (Actualizado según tu Cloudinary) ---
+opciones = [
+    "corridos tumbados", 
+    "bandas", 
+    "Regueton", 
+    "cristianas", 
+    "pop latino", 
+    "pop en español", 
+    "pop en ingles", 
+    "trance", 
+    "las mas sonadas"
+]
+
 genero_elegido = st.selectbox("📂 SELECCIONA TU BIBLIOTECA:", opciones)
 
-if st.button("🔄 SINCRONIZAR CON LA NUBE"):
+st.markdown("---")
+
+# --- BOTÓN DE SINCRONIZACIÓN ---
+if st.button("🔄 ACTUALIZAR Y CARGAR MÚSICA"):
     try:
-        # 1. Traemos TODOS los archivos de la carpeta (imágenes y audios)
-        recursos = cloudinary.api.resources(
-            type="upload", 
-            prefix=genero_elegido, 
-            resource_type="image", # Primero buscamos las imágenes de portada
-            max_results=100
-        )
-        
-        # Guardamos las imágenes en un diccionario para acceso rápido
-        portadas = {res['public_id'].split('/')[-1]: res['secure_url'] for res in recursos.get('resources', [])}
+        with st.spinner(f"Accediendo a la carpeta '{genero_elegido}'..."):
+            
+            # 1. Buscamos todas las IMÁGENES de la carpeta
+            res_img = cloudinary.api.resources(
+                type="upload", 
+                prefix=genero_elegido, 
+                resource_type="image", 
+                max_results=200
+            )
+            # Diccionario para emparejar foto con audio por nombre
+            mapa_portadas = {img['public_id'].split('/')[-1]: img['secure_url'] for img in res_img.get('resources', [])}
 
-        # 2. Ahora traemos los audios
-        audios = cloudinary.api.resources(
-            type="upload", 
-            prefix=genero_elegido, 
-            resource_type="video", 
-            max_results=100
-        )
-        
-        if not audios['resources']:
-            st.warning("No hay canciones aquí todavía.")
-        else:
-            cols = st.columns(2)
-            for i, cancion in enumerate(audios['resources']):
-                with cols[i % 2]:
-                    nombre_id = cancion['public_id'].split('/')[-1]
-                    
-                    # Buscamos si existe una portada con el mismo nombre
-                    url_img = portadas.get(nombre_id, "https://via.placeholder.com/500x500?text=MAYNEXUS+MUSIC")
-                    
-                    st.markdown('<div class="song-card">', unsafe_allow_html=True)
-                    st.image(url_img, use_column_width=True)
-                    st.markdown(f"### 🎧 {nombre_id}")
-                    st.audio(cancion['secure_url'])
-                    st.markdown('</div>', unsafe_allow_html=True)
-                    
+            # 2. Buscamos todos los AUDIOS de la carpeta
+            res_audio = cloudinary.api.resources(
+                type="upload", 
+                prefix=genero_elegido, 
+                resource_type="video", 
+                max_results=200
+            )
+            
+            canciones = res_audio.get('resources', [])
+
+            if not canciones:
+                st.warning(f"No se encontraron archivos en la carpeta '{genero_elegido}'.")
+            else:
+                st.success(f"¡Se cargaron {len(canciones)} canciones exitosamente!")
+                
+                # Mostramos en 2 columnas para que parezca app de streaming
+                cols = st.columns(2)
+                for i, cancion in enumerate(canciones):
+                    with cols[i % 2]:
+                        nombre_id = cancion['public_id'].split('/')[-1]
+                        
+                        # Buscamos la portada; si no hay, usamos una por defecto
+                        url_foto = mapa_portadas.get(nombre_id, "https://via.placeholder.com/500x500.png?text=MAYNEXUS+MUSIC")
+                        
+                        st.markdown('<div class="song-card">', unsafe_allow_html=True)
+                        st.image(url_foto, use_column_width=True)
+                        st.markdown(f"### 🎧 {nombre_id}")
+                        st.audio(cancion['secure_url'])
+                        st.markdown('</div>', unsafe_allow_html=True)
+                        
     except Exception as e:
-        st.error(f"Error: {e}")
+        st.error(f"Error de conexión con Cloudinary: {e}")
 
-st.caption("MAYNEXUS v1.6 | Calidad Stryker")
+st.sidebar.markdown("---")
+st.sidebar.info(f"**Usuario:** Mynor Vazquez\n\n**Proyecto:** MAYNEXUS v1.7\n\n**Estado:** 100% Nube")
