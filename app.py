@@ -3,7 +3,7 @@ import cloudinary
 import cloudinary.api
 import random
 
-# --- CONFIGURACIÓN ---
+# --- CONFIGURACIÓN CLOUDINARY ---
 cloudinary.config( 
   cloud_name = "detprbdvv", 
   api_key = "487844675958599", 
@@ -11,91 +11,101 @@ cloudinary.config(
   secure = True
 )
 
-# --- INTERFAZ PREMIUM ---
-st.set_page_config(page_title="MAYNEXUS INFINITY", layout="wide")
+# --- CONFIGURACIÓN DE PÁGINA ---
+st.set_page_config(page_title="MAYNEXUS GLOBAL", page_icon="🔍", layout="wide")
 
+# --- CSS: INTERFAZ MINIMALISTA CON ONDA ---
 st.markdown("""
     <style>
-    .stApp { background-color: #000; color: #fff; }
+    .stApp { background-color: #000000; color: #ffffff; }
     
-    /* BARRA DE ONDA DINÁMICA (JAMÁS VISTA) */
+    /* Onda de Colores Superior */
     .nexus-wave {
-        height: 15px; width: 100%;
-        background: linear-gradient(270deg, #00ff99, #0066ff, #ff0055, #00ff99);
-        background-size: 400% 400%;
-        animation: nexusWave 6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
-        border-radius: 50px;
-        box-shadow: 0 0 25px rgba(0, 255, 153, 0.5);
-        margin-bottom: 30px;
+        height: 8px; width: 100%;
+        background: linear-gradient(90deg, #00ff99, #0066ff, #ff0055, #00ff99);
+        background-size: 200% 100%;
+        animation: wave 5s linear infinite;
+        border-radius: 10px; margin-bottom: 25px;
     }
-    @keyframes nexusWave {
-        0% { background-position: 0% 50%; transform: scaleY(0.8); }
-        50% { background-position: 100% 50%; transform: scaleY(1.2); }
-        100% { background-position: 0% 50%; transform: scaleY(0.8); }
-    }
+    @keyframes wave { 0% {background-position:0%} 100% {background-position:100%} }
 
-    .song-card { background: #0a0a0a; border-radius: 15px; padding: 10px; border: 1px solid #1a1a1a; transition: 0.3s; }
-    .song-card:hover { border-color: #00ff99; transform: translateY(-5px); }
+    /* Tarjetas de Canción */
+    .song-card {
+        background: #0d0d0d;
+        border-radius: 15px;
+        padding: 12px;
+        text-align: center;
+        border: 1px solid #1a1a1a;
+        transition: 0.3s;
+    }
+    .song-card:hover { border-color: #00ff99; transform: scale(1.03); }
     .cover-art { width: 100%; aspect-ratio: 1/1; border-radius: 10px; object-fit: cover; }
+    
+    /* Buscador Estilizado */
+    .stTextInput > div > div > input {
+        background-color: #111 !important;
+        color: #00ff99 !important;
+        border: 1px solid #333 !important;
+        border-radius: 10px !important;
+    }
     </style>
     <div class="nexus-wave"></div>
     """, unsafe_allow_html=True)
 
 # --- SIDEBAR ---
-if 'shuffle' not in st.session_state: st.session_state.shuffle = False
-if 'folder' not in st.session_state: st.session_state.folder = "corridos tumbados"
-
 with st.sidebar:
-    st.title("MAYNEXUS v19")
-    st.session_state.shuffle = st.toggle("🔀 MODO ALEATORIO", value=st.session_state.shuffle)
+    st.title("MAYNEXUS ⚡")
+    st.markdown("### MODO GLOBAL")
+    st.info("Ahora todos tus archivos se cargan juntos. Usa el buscador para filtrar por artista o género.")
+    shuffle = st.toggle("🔀 MODO ALEATORIO", value=True)
+    if st.button("🔄 REFRESCAR BIBLIOTECA"):
+        st.cache_data.clear()
     st.markdown("---")
-    
-    # Lista de carpetas/géneros
-    generos = ["corridos tumbados", "bandas", "Regueton", "cristianas", "pop latino", "pop en español", "pop en ingles", "trance", "las mas sonadas"]
-    for g in generos:
-        if st.button(f"📁 {g.upper()}", key=f"g_{g}"):
-            st.session_state.folder = g
-            st.rerun()
+    st.caption("Operador: Maynor Vazquez")
 
-# --- BUSCADOR INTELIGENTE (FIX) ---
-st.header(f"Sección: {st.session_state.folder.upper()}")
+# --- BUSCADOR PRINCIPAL ---
+query = st.text_input("🔍 Busca por nombre, artista o género (ej: Corridos, Travis, Regueton)...", "").lower()
 
+# --- CARGA DE DATOS SIN CARPETAS ---
 try:
-    with st.spinner("Sincronizando flujo de datos..."):
-        # Buscamos en TODA la cuenta (sin prefix estricto) para rescatar tus archivos sueltos
-        # pero filtramos por los que contengan el nombre de la carpeta en su nombre
-        res_audio = cloudinary.api.resources(resource_type="video", max_results=500)
-        todas_las_canciones = res_audio.get('resources', [])
-        
-        # Filtramos: si el archivo está en la carpeta O si el nombre tiene palabras clave
-        canciones = [
-            c for c in todas_las_canciones 
-            if st.session_state.folder in c['public_id'].lower() or c['public_id'].startswith(st.session_state.folder)
-        ]
-
-        # Si sigue sin salir nada, buscamos imágenes para las portadas
+    with st.spinner("Sincronizando biblioteca global..."):
+        # 1. Traer todas las imágenes (portadas)
         res_img = cloudinary.api.resources(resource_type="image", max_results=500)
         mapa_portadas = {img['public_id'].split('/')[-1]: img['secure_url'] for img in res_img.get('resources', [])}
 
+        # 2. Traer todos los audios (sin prefix de carpeta)
+        res_audio = cloudinary.api.resources(resource_type="video", max_results=500)
+        todas_las_canciones = res_audio.get('resources', [])
+
+    # FILTRADO POR BUSCADOR
+    if query:
+        canciones = [c for c in todas_las_canciones if query in c['public_id'].lower()]
+    else:
+        canciones = todas_las_canciones
+
+    # APLICAR SHUFFLE
+    if shuffle and not query:
+        random.shuffle(canciones)
+
+    # RENDERIZADO
     if canciones:
-        if st.session_state.shuffle:
-            random.shuffle(canciones)
-            
+        st.write(f"Mostrando {len(canciones)} resultados")
         cols = st.columns(5)
         for i, cancion in enumerate(canciones):
             with cols[i % 5]:
-                id_limpio = cancion['public_id'].split('/')[-1]
-                foto = mapa_portadas.get(id_limpio, "https://via.placeholder.com/300/111/00ff99?text=♫")
+                # Limpiar nombre para mostrar
+                nombre_raw = cancion['public_id'].split('/')[-1]
+                foto = mapa_portadas.get(nombre_raw, "https://via.placeholder.com/300/111/00ff99?text=♫")
                 
                 st.markdown(f'''
                     <div class="song-card">
                         <img src="{foto}" class="cover-art">
-                        <p style="font-size:12px; font-weight:bold; height:30px; overflow:hidden; margin-top:5px;">{id_limpio}</p>
+                        <div style="font-size:13px; font-weight:600; height:35px; overflow:hidden; margin-top:8px;">{nombre_raw}</div>
                     </div>
                 ''', unsafe_allow_html=True)
                 st.audio(cancion['secure_url'])
     else:
-        st.warning("No se encontraron coincidencias. Intenta renombrar tus archivos en Cloudinary incluyendo el género.")
+        st.warning("No se encontró nada con esa búsqueda.")
 
 except Exception as e:
-    st.error(f"Falla técnica: {e}")
+    st.error(f"Error de conexión: {e}")
