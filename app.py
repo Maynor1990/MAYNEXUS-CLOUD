@@ -2,7 +2,7 @@ import streamlit as st
 import cloudinary
 import cloudinary.api
 
-# --- CONFIGURACIÓN CLOUDINARY ---
+# --- CONFIGURACIÓN DE ACCESO ---
 cloudinary.config( 
   cloud_name = "detprbdvv", 
   api_key = "487844675958599", 
@@ -10,138 +10,147 @@ cloudinary.config(
   secure = True
 )
 
-# --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(page_title="MAYNEXUS AURORA", page_icon="🎧", layout="wide")
+# --- CONFIGURACIÓN DE INTERFAZ ---
+st.set_page_config(page_title="MAYNEXUS V17", page_icon="🎧", layout="wide")
 
-# --- CSS: ESTILO APPLE MUSIC CON ONDA DE COLORES ---
+# --- CSS: ESTILO GRID PROFESIONAL ---
 st.markdown("""
     <style>
-    /* Fondo oscuro y tipografía limpia */
+    /* Fondo negro profundo */
     .stApp { background-color: #000000; color: #ffffff; }
     
-    /* EFECTO AURORA (Onda de colores animada en el tope) */
+    /* Onda de colores Aurora */
     .aurora-bar {
-        height: 6px;
-        width: 100%;
-        background: linear-gradient(90deg, #ff0055, #00ff99, #0066ff, #ff0055);
+        height: 5px; width: 100%;
+        background: linear-gradient(90deg, #00ff99, #0066ff, #ff0055, #00ff99);
         background-size: 300% 100%;
-        animation: aurora 8s linear infinite;
+        animation: aurora 10s linear infinite;
         border-radius: 10px;
-        margin-bottom: 25px;
+        margin-bottom: 20px;
     }
-    @keyframes aurora {
-        0% { background-position: 0% 50%; }
-        100% { background-position: 100% 50%; }
-    }
+    @keyframes aurora { 0% {background-position:0% 50%} 100% {background-position:100% 50%} }
 
-    /* Botones de Carpeta en Sidebar */
-    div[data-testid="stSidebar"] .stButton > button {
+    /* Tarjetas de la Cuadrícula (Grid) */
+    .song-card {
+        background: #0d0d0d;
+        border-radius: 15px;
+        padding: 12px;
+        text-align: center;
+        border: 1px solid #1a1a1a;
+        transition: all 0.3s ease;
+        margin-bottom: 10px;
+    }
+    .song-card:hover {
+        border-color: #00ff99;
+        transform: scale(1.02);
+        background: #111;
+    }
+    .cover-art {
+        width: 100%;
+        aspect-ratio: 1/1;
+        border-radius: 10px;
+        object-fit: cover;
+        margin-bottom: 10px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    }
+    .song-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #f0f0f0;
+        height: 40px;
+        line-height: 1.2;
+        overflow: hidden;
+        margin-bottom: 10px;
+    }
+    
+    /* Sidebar Industrial */
+    [data-testid="stSidebar"] { 
+        background-color: #050505 !important; 
+        border-right: 1px solid #1a1a1a; 
+    }
+    .stButton > button {
         width: 100%;
         text-align: left !important;
         background-color: transparent !important;
+        color: #777 !important;
         border: none !important;
-        color: #888 !important;
-        padding: 12px 10px !important;
-        font-size: 16px !important;
-        transition: 0.3s;
-        border-radius: 8px;
+        padding: 10px 15px !important;
+        font-size: 15px !important;
+        transition: 0.2s;
     }
-    div[data-testid="stSidebar"] .stButton > button:hover {
+    .stButton > button:hover {
         color: #00ff99 !important;
-        background-color: #1a1a1a !important;
+        background-color: #111 !important;
     }
-    
-    /* Estilo de Filas de Canción */
-    .song-row {
-        display: flex;
-        align-items: center;
-        padding: 10px;
-        border-bottom: 1px solid #111;
-        margin-bottom: 5px;
-    }
-    .thumb { width: 50px; height: 50px; border-radius: 6px; margin-right: 15px; object-fit: cover; }
-    .song-name { font-weight: 500; font-size: 15px; color: #ffffff; }
-    .song-artist { font-size: 13px; color: #666; }
-    
-    /* Sidebar Fija Oscura */
-    [data-testid="stSidebar"] { background-color: #050505 !important; border-right: 1px solid #111; }
     </style>
     <div class="aurora-bar"></div>
     """, unsafe_allow_html=True)
 
-# --- LÓGICA DE NAVEGACIÓN ---
-# Usamos session_state para que la carpeta no se resetee al hacer clic
+# --- NAVEGACIÓN LATERAL ---
 if 'folder' not in st.session_state:
     st.session_state.folder = "corridos tumbados"
 
 with st.sidebar:
-    st.markdown("<h1 style='color:#00ff99; font-size: 26px; margin-bottom: 0;'>MAYNEXUS</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='color:#555; font-size: 11px; margin-bottom: 25px;'>NEXUS ELITE v4.0</p>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color:#00ff99; margin-bottom:0;'>MAYNEXUS V17</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='color:#444; font-size:10px; margin-bottom:30px;'>STRYKER QUALITY SYSTEM</p>", unsafe_allow_html=True)
     
-    st.markdown("<p style='color:#888; font-size: 13px; font-weight: bold;'>BIBLIOTECA</p>", unsafe_allow_html=True)
+    st.markdown("<p style='color:#888; font-size:12px; font-weight:bold; margin-left:15px;'>BIBLIOTECA</p>", unsafe_allow_html=True)
     
     carpetas = [
         "corridos tumbados", "bandas", "Regueton", "cristianas", 
         "pop latino", "pop en español", "pop en ingles", "trance", "las mas sonadas"
     ]
     
-    # Botones laterales para cada carpeta
     for c in carpetas:
-        # Si el botón coincide con la carpeta activa, le damos un toque visual
-        label = f"📁 {c.title()}"
-        if st.button(label, key=f"btn_{c}"):
+        # Icono dinámico según selección
+        icon = "🟢" if st.session_state.folder == c else "📁"
+        if st.button(f"{icon} {c.upper()}", key=f"btn_{c}"):
             st.session_state.folder = c
             st.rerun()
-
+            
     st.markdown("---")
-    st.caption(f"Usuario: Maynor Vazquez")
+    if st.button("🔄 REFRESCAR NUBE"):
+        st.cache_data.clear()
 
-# --- CONTENIDO PRINCIPAL ---
-st.markdown(f"<h2 style='font-size: 32px;'>{st.session_state.folder.title()}</h2>", unsafe_allow_html=True)
+# --- CUERPO PRINCIPAL (GRID DE CANCIONES) ---
+st.markdown(f"<h2 style='letter-spacing:-1px;'>{st.session_state.folder.title()}</h2>", unsafe_allow_html=True)
 
 try:
-    with st.spinner("Cargando flujo de datos..."):
-        # 1. Buscamos imágenes
+    with st.spinner("Sincronizando medios..."):
+        # 1. Obtener Portadas
         res_img = cloudinary.api.resources(
             type="upload", prefix=st.session_state.folder, resource_type="image", max_results=100
         )
         mapa_portadas = {img['public_id'].split('/')[-1]: img['secure_url'] for img in res_img.get('resources', [])}
 
-        # 2. Buscamos audios
+        # 2. Obtener Audios
         res_audio = cloudinary.api.resources(
             type="upload", prefix=st.session_state.folder, resource_type="video", max_results=100
         )
         canciones = res_audio.get('resources', [])
 
     if canciones:
-        for cancion in canciones:
-            nombre_full = cancion['public_id'].split('/')[-1]
-            # Separar nombre por el guion "Artista - Cancion"
-            parts = nombre_full.split(" - ")
-            artist = parts[0] if len(parts) > 1 else "Artista"
-            track = parts[1] if len(parts) > 1 else nombre_full
-            
-            url_img = mapa_portadas.get(nombre_full, "https://via.placeholder.com/100/111/00ff99?text=♫")
-            
-            # Layout Apple Music: Info a la izquierda, audio a la derecha
-            col_info, col_play = st.columns([2.5, 1.5])
-            
-            with col_info:
+        # Rejilla de 5 columnas (Perfecto para móvil y PC)
+        cols = st.columns(5)
+        for i, cancion in enumerate(canciones):
+            with cols[i % 5]:
+                nombre_full = cancion['public_id'].split('/')[-1]
+                url_img = mapa_portadas.get(nombre_full, "https://via.placeholder.com/400/111/00ff99?text=♫")
+                
+                # Renderizado de Tarjeta Estilo V17
                 st.markdown(f'''
-                    <div class="song-row">
-                        <img src="{url_img}" class="thumb">
-                        <div>
-                            <div class="song-name">{track}</div>
-                            <div class="song-artist">{artist}</div>
-                        </div>
+                    <div class="song-card">
+                        <img src="{url_img}" class="cover-art">
+                        <div class="song-title">{nombre_full[:45]}</div>
                     </div>
                 ''', unsafe_allow_html=True)
-            
-            with col_play:
-                # El reproductor de Streamlit es minimalista por defecto
+                # Reproductor compacto debajo de la tarjeta
                 st.audio(cancion['secure_url'])
     else:
-        st.info(f"La carpeta '{st.session_state.folder}' está vacía. ¡Dale fuego a la Lenovo!")
+        st.info(f"La sección '{st.session_state.folder}' está lista para recibir archivos de la Lenovo.")
 
 except Exception as e:
-    st.error(f"Error en la conexión Nexus: {e}")
+    st.error(f"Error de conexión: {e}")
+
+st.sidebar.markdown("---")
+st.sidebar.caption(f"Operador: Mynor Vazquez")
