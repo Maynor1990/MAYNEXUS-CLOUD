@@ -2,7 +2,7 @@ import streamlit as st
 import cloudinary
 import cloudinary.api
 
-# --- CONFIGURACIÓN DE CONEXIÓN ---
+# --- CONFIGURACIÓN CLOUDINARY ---
 cloudinary.config( 
   cloud_name = "detprbdvv", 
   api_key = "487844675958599", 
@@ -11,101 +11,101 @@ cloudinary.config(
 )
 
 # --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(page_title="MAYNEXUS v2.0", page_icon="🎵", layout="wide")
+st.set_page_config(page_title="MAYNEXUS ELITE", page_icon="🎧", layout="wide")
 
-# --- CSS PROFESIONAL Y MINIMALISTA ---
+# --- CSS ESTILO APPLE MUSIC / PREMIUM ---
 st.markdown("""
     <style>
-    /* Fondo oscuro sólido y elegante */
-    .stApp { background-color: #0e1117; color: #ffffff; }
+    /* Fondo oscuro profundo */
+    .stApp { background-color: #000000; color: #ffffff; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
     
-    /* Estilo para las tarjetas de música */
-    .song-card {
-        background: #161b22;
-        padding: 20px;
-        border-radius: 20px;
-        border: 1px solid #30363d;
-        transition: transform 0.3s ease;
-        margin-bottom: 25px;
-    }
-    .song-card:hover {
-        transform: translateY(-5px);
-        border-color: #00ff99;
-    }
-    
-    /* Títulos limpios */
-    h1 { font-weight: 800; letter-spacing: -1px; color: #ffffff; margin-bottom: 30px; }
-    .song-title { color: #00ff99; font-size: 1.1rem; font-weight: 600; margin-top: 15px; }
-    
-    /* Personalización de botones */
-    .stButton>button {
-        width: 100%;
-        background-color: #00ff99;
-        color: #000000;
-        border-radius: 12px;
-        font-weight: bold;
-        border: none;
+    /* Contenedor de la fila de canción */
+    .song-row {
+        display: flex;
+        align-items: center;
         padding: 10px;
+        border-bottom: 1px solid #1a1a1a;
+        transition: background 0.2s;
+        border-radius: 8px;
+    }
+    .song-row:hover { background-color: #1a1a1a; }
+    
+    /* Miniatura redonda pequeña */
+    .thumb {
+        width: 50px;
+        height: 50px;
+        border-radius: 6px;
+        object-fit: cover;
+        margin-right: 15px;
     }
     
-    /* Esconder elementos innecesarios */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
+    /* Info de la canción */
+    .song-info { flex-grow: 1; }
+    .song-name { font-size: 15px; font-weight: 500; color: #ffffff; }
+    .song-artist { font-size: 13px; color: #888888; }
+    
+    /* Títulos de sección */
+    .section-title { font-size: 24px; font-weight: 700; margin: 20px 0; color: #ffffff; }
+    
+    /* Sidebar minimalista */
+    [data-testid="stSidebar"] { background-color: #080808; border-right: 1px solid #1a1a1a; }
+    .stSelectbox label { color: #888 !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- BARRA LATERAL (Panel de Control) ---
+# --- PANEL LATERAL ---
 with st.sidebar:
-    st.image("https://res.cloudinary.com/detprbdvv/image/upload/v1/logo_nexus.png", width=150) # Si tienes logo úsalo aquí
-    st.markdown("### 🎛️ PANEL DE CONTROL")
-    
-    genero_elegido = st.selectbox("CATEGORÍA", [
+    st.markdown("<h2 style='color:#00ff99'>MAYNEXUS</h2>", unsafe_allow_html=True)
+    genero = st.selectbox("BIBLIOTECA", [
         "corridos tumbados", "bandas", "Regueton", "cristianas", 
         "pop latino", "pop en español", "pop en ingles", "trance", "las mas sonadas"
     ])
-    
-    actualizar = st.button("🔄 SINCRONIZAR NUBE")
-    
+    sync = st.button("🔄 SINCRONIZAR")
     st.markdown("---")
-    st.info(f"**Usuario:** Maynor Vazquez\n\n**Nivel:** Quality Inspector\n\n**Versión:** 2.0 Premium")
+    st.caption("v3.0 Premium | Maynor Vazquez")
 
 # --- CUERPO PRINCIPAL ---
-st.title("MAYNEXUS `PRO` 🎵")
+st.markdown(f"<div class='section-title'>Recién llegadas en {genero.title()}</div>", unsafe_allow_html=True)
 
-if actualizar:
+if sync or 'first_run' not in st.session_state:
+    st.session_state.first_run = True
     try:
-        with st.spinner("Conectando con la bóveda de medios..."):
-            # Búsqueda de recursos
-            res_img = cloudinary.api.resources(type="upload", prefix=genero_elegido, resource_type="image", max_results=100)
-            mapa_portadas = {img['public_id'].split('/')[-1]: img['secure_url'] for img in res_img.get('resources', [])}
+        # 1. Obtener Portadas
+        res_img = cloudinary.api.resources(type="upload", prefix=genero, resource_type="image", max_results=100)
+        mapa_portadas = {img['public_id'].split('/')[-1]: img['secure_url'] for img in res_img.get('resources', [])}
 
-            res_audio = cloudinary.api.resources(type="upload", prefix=genero_elegido, resource_type="video", max_results=100)
-            canciones = res_audio.get('resources', [])
+        # 2. Obtener Audios
+        res_audio = cloudinary.api.resources(type="upload", prefix=genero, resource_type="video", max_results=100)
+        canciones = res_audio.get('resources', [])
 
-            if canciones:
-                # Layout de rejilla limpio (3 columnas para minimalismo)
-                cols = st.columns(3)
-                for i, cancion in enumerate(canciones):
-                    with cols[i % 3]:
-                        nombre_id = cancion['public_id'].split('/')[-1]
-                        url_foto = mapa_portadas.get(nombre_id, "https://via.placeholder.com/600x400/161b22/00ff99?text=MAYNEXUS")
-                        
-                        # Renderizado de Tarjeta
-                        st.markdown(f'''
-                            <div class="song-card">
-                                <img src="{url_foto}" style="width:100%; border-radius:12px;">
-                                <div class="song-title">{nombre_id}</div>
+        if canciones:
+            for cancion in canciones:
+                nombre_full = cancion['public_id'].split('/')[-1]
+                # Intentamos separar Artista - Canción si el nombre tiene guion
+                parts = nombre_full.split(" - ")
+                artist = parts[0] if len(parts) > 1 else "Artista Desconocido"
+                track = parts[1] if len(parts) > 1 else nombre_full
+                
+                url_img = mapa_portadas.get(nombre_full, "https://via.placeholder.com/100/1a1a1a/00ff99?text=♫")
+                
+                # Renderizado estilo Lista Apple Music
+                col_info, col_audio = st.columns([2, 1])
+                
+                with col_info:
+                    st.markdown(f'''
+                        <div class="song-row">
+                            <img src="{url_img}" class="thumb">
+                            <div class="song-info">
+                                <div class="song-name">{track}</div>
+                                <div class="song-artist">{artist}</div>
                             </div>
-                        ''', unsafe_allow_html=True)
-                        st.audio(cancion['secure_url'])
-            else:
-                st.warning("No hay medios en esta categoría.")
+                        </div>
+                    ''', unsafe_allow_html=True)
+                
+                with col_audio:
+                    st.audio(cancion['secure_url'])
+        else:
+            st.info("Selecciona una estación y pulsa Sincronizar.")
+            
     except Exception as e:
-        st.error(f"Error de enlace: {e}")
-else:
-    # Mensaje de bienvenida minimalista
-    st.markdown("""
-        ### Bienvenido al Nexus, Maynor.
-        Selecciona una categoría en el panel izquierdo para comenzar la transmisión.
-    """)
-    st.image("https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?auto=format&fit=crop&q=80&w=1000", use_column_width=True)
+        st.error(f"Error de red: {e}")
