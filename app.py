@@ -3,7 +3,7 @@ import cloudinary
 import cloudinary.api
 import random
 
-# --- CONFIGURACIÓN DE ACCESO ---
+# --- CONFIGURACIÓN ---
 cloudinary.config( 
   cloud_name = "detprbdvv", 
   api_key = "487844675958599", 
@@ -11,124 +11,85 @@ cloudinary.config(
   secure = True
 )
 
-# --- CONFIGURACIÓN DE INTERFAZ ---
-st.set_page_config(page_title="MAYNEXUS INFINITY", page_icon="⚡", layout="wide")
-
-# --- CSS: ONDA INFINITA Y DISEÑO ELITE ---
+# --- ESTILOS NEXUS INFINITY ---
 st.markdown("""
     <style>
-    .stApp { background-color: #000000; color: #ffffff; }
-    
-    /* BARRA DE ONDA PROFESIONAL ANIMADA (Aurora Wave) */
+    .stApp { background-color: #000; color: #fff; }
     .infinity-wave {
-        height: 12px;
-        width: 100%;
-        background: linear-gradient(270deg, #00ff99, #0066ff, #ff0055, #00ff99);
-        background-size: 400% 400%;
-        animation: liquidWave 8s ease-in-out infinite;
-        border-radius: 50px;
-        filter: blur(1px);
-        box-shadow: 0 0 15px rgba(0, 255, 153, 0.4);
-        margin-bottom: 30px;
+        height: 8px; width: 100%;
+        background: linear-gradient(90deg, #00ff99, #0066ff, #ff0055, #00ff99);
+        background-size: 200% 100%;
+        animation: wave 5s linear infinite;
+        border-radius: 10px; margin-bottom: 20px;
     }
-    @keyframes liquidWave {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-    }
-
-    /* Tarjetas de Canción Premium */
-    .song-card {
-        background: #0a0a0a;
-        border-radius: 15px;
-        padding: 12px;
-        text-align: center;
-        border: 1px solid #1a1a1a;
-        transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
-    .song-card:hover {
-        border-color: #00ff99;
-        transform: translateY(-8px);
-        box-shadow: 0 10px 25px rgba(0, 255, 153, 0.15);
-    }
-    .cover-art {
-        width: 100%;
-        aspect-ratio: 1/1;
-        border-radius: 10px;
-        object-fit: cover;
-        margin-bottom: 12px;
-    }
-    
-    /* Sidebar Industrial Moderno */
-    [data-testid="stSidebar"] { background-color: #050505 !important; border-right: 1px solid #1a1a1a; }
-    .stButton > button {
-        width: 100%; text-align: left !important; background: transparent !important;
-        border: none !important; color: #777 !important; padding: 12px !important;
-        font-size: 15px !important; transition: 0.3s;
-    }
-    .stButton > button:hover { color: #00ff99 !important; background: #111 !important; }
+    @keyframes wave { 0% {background-position:0%} 100% {background-position:100%} }
+    .song-card { background: #111; border-radius: 15px; padding: 10px; border: 1px solid #222; text-align: center; }
+    .cover-art { width: 100%; aspect-ratio: 1/1; border-radius: 10px; object-fit: cover; }
     </style>
     <div class="infinity-wave"></div>
     """, unsafe_allow_html=True)
 
-# --- LÓGICA DE NAVEGACIÓN Y SHUFFLE ---
+# --- NAVEGACIÓN ---
 if 'folder' not in st.session_state:
     st.session_state.folder = "corridos tumbados"
-if 'shuffle_mode' not in st.session_state:
-    st.session_state.shuffle_mode = False
 
 with st.sidebar:
-    st.markdown("<h1 style='color:#00ff99; font-size:26px;'>MAYNEXUS</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='color:#444; font-size:10px; margin-top:-15px;'>INFINITY EDITION v18</p>", unsafe_allow_html=True)
-    
-    # Toggle de Modo Aleatorio
-    st.session_state.shuffle_mode = st.toggle("🔀 MODO ALEATORIO", value=st.session_state.shuffle_mode)
-    
-    st.markdown("---")
+    st.title("MAYNEXUS ⚡")
     carpetas = ["corridos tumbados", "bandas", "Regueton", "cristianas", "pop latino", "pop en español", "pop en ingles", "trance", "las mas sonadas"]
     
     for c in carpetas:
-        active_icon = "🟢 " if st.session_state.folder == c else "📁 "
-        if st.button(f"{active_icon}{c.upper()}", key=f"nav_{c}"):
+        if st.button(f"📁 {c.upper()}", key=f"btn_{c}"):
             st.session_state.folder = c
             st.rerun()
 
-# --- CARGA Y RENDERIZADO ---
-st.markdown(f"<h2 style='letter-spacing:-1px;'>{st.session_state.folder.title()}</h2>", unsafe_allow_html=True)
+# --- MOTOR DE BÚSQUEDA CORREGIDO ---
+st.header(f"Sección: {st.session_state.folder.upper()}")
 
 try:
-    with st.spinner("Sintonizando flujo industrial..."):
-        # Obtener portadas y audios
-        res_img = cloudinary.api.resources(type="upload", prefix=st.session_state.folder, resource_type="image", max_results=100)
-        mapa_portadas = {img['public_id'].split('/')[-1]: img['secure_url'] for img in res_img.get('resources', [])}
-
-        res_audio = cloudinary.api.resources(type="upload", prefix=st.session_state.folder, resource_type="video", max_results=100)
+    # IMPORTANTE: El prefix debe terminar en '/' para asegurar que busque DENTRO de la carpeta
+    prefix_busqueda = f"{st.session_state.folder}/"
+    
+    with st.spinner(f"Escaneando {prefix_busqueda}..."):
+        # 1. Buscar Audios (Cloudinary los trata como 'video')
+        res_audio = cloudinary.api.resources(
+            type="upload", 
+            prefix=st.session_state.folder, # Intentamos con y sin barra
+            resource_type="video", 
+            max_results=500
+        )
         canciones = res_audio.get('resources', [])
 
-    if canciones:
-        # APLICAR MODO ALEATORIO
-        if st.session_state.shuffle_mode:
-            random.shuffle(canciones)
+        # 2. Buscar Imágenes
+        res_img = cloudinary.api.resources(
+            type="upload", 
+            prefix=st.session_state.folder, 
+            resource_type="image", 
+            max_results=500
+        )
+        mapa_portadas = {img['public_id'].split('/')[-1]: img['secure_url'] for img in res_img.get('resources', [])}
 
-        # Grid de 5 columnas para máxima visibilidad
+    if canciones:
+        st.success(f"¡Encontradas {len(canciones)} canciones!")
         cols = st.columns(5)
         for i, cancion in enumerate(canciones):
             with cols[i % 5]:
-                nombre_full = cancion['public_id'].split('/')[-1]
-                url_img = mapa_portadas.get(nombre_full, "https://via.placeholder.com/400/111/00ff99?text=♫")
+                # Limpiamos el ID para quitar la ruta de la carpeta del nombre visible
+                nombre_archivo = cancion['public_id'].split('/')[-1]
+                url_foto = mapa_portadas.get(nombre_archivo, "https://via.placeholder.com/300/111/00ff99?text=♫")
                 
                 st.markdown(f'''
                     <div class="song-card">
-                        <img src="{url_img}" class="cover-art">
-                        <div style="font-size:13px; font-weight:600; height:35px; overflow:hidden;">{nombre_full[:40]}</div>
+                        <img src="{url_foto}" class="cover-art">
+                        <p style="font-size:12px; margin-top:5px; height:30px; overflow:hidden;">{nombre_archivo}</p>
                     </div>
                 ''', unsafe_allow_html=True)
                 st.audio(cancion['secure_url'])
     else:
-        st.info(f"La carpeta '{st.session_state.folder}' está lista para recibir archivos.")
+        st.warning(f"No se detectaron archivos. Verifica que en Cloudinary la carpeta se llame exactamente: '{st.session_state.folder}'")
+        # Botón de ayuda para debug
+        if st.button("🔍 Ver qué hay en mi Cloudinary"):
+            all_res = cloudinary.api.resources(max_results=10)
+            st.write("Últimos 10 archivos subidos:", [r['public_id'] for r in all_res['resources']])
 
 except Exception as e:
-    st.error(f"Falla en el motor Nexus: {e}")
-
-st.sidebar.markdown("---")
-st.sidebar.caption(f"Inspector: Maynor Vazquez")
+    st.error(f"Error técnico: {e}")
