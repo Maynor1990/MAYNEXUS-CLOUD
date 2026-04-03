@@ -11,85 +11,91 @@ cloudinary.config(
   secure = True
 )
 
-# --- ESTILOS NEXUS INFINITY ---
+# --- INTERFAZ PREMIUM ---
+st.set_page_config(page_title="MAYNEXUS INFINITY", layout="wide")
+
 st.markdown("""
     <style>
     .stApp { background-color: #000; color: #fff; }
-    .infinity-wave {
-        height: 8px; width: 100%;
-        background: linear-gradient(90deg, #00ff99, #0066ff, #ff0055, #00ff99);
-        background-size: 200% 100%;
-        animation: wave 5s linear infinite;
-        border-radius: 10px; margin-bottom: 20px;
+    
+    /* BARRA DE ONDA DINÁMICA (JAMÁS VISTA) */
+    .nexus-wave {
+        height: 15px; width: 100%;
+        background: linear-gradient(270deg, #00ff99, #0066ff, #ff0055, #00ff99);
+        background-size: 400% 400%;
+        animation: nexusWave 6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+        border-radius: 50px;
+        box-shadow: 0 0 25px rgba(0, 255, 153, 0.5);
+        margin-bottom: 30px;
     }
-    @keyframes wave { 0% {background-position:0%} 100% {background-position:100%} }
-    .song-card { background: #111; border-radius: 15px; padding: 10px; border: 1px solid #222; text-align: center; }
+    @keyframes nexusWave {
+        0% { background-position: 0% 50%; transform: scaleY(0.8); }
+        50% { background-position: 100% 50%; transform: scaleY(1.2); }
+        100% { background-position: 0% 50%; transform: scaleY(0.8); }
+    }
+
+    .song-card { background: #0a0a0a; border-radius: 15px; padding: 10px; border: 1px solid #1a1a1a; transition: 0.3s; }
+    .song-card:hover { border-color: #00ff99; transform: translateY(-5px); }
     .cover-art { width: 100%; aspect-ratio: 1/1; border-radius: 10px; object-fit: cover; }
     </style>
-    <div class="infinity-wave"></div>
+    <div class="nexus-wave"></div>
     """, unsafe_allow_html=True)
 
-# --- NAVEGACIÓN ---
-if 'folder' not in st.session_state:
-    st.session_state.folder = "corridos tumbados"
+# --- SIDEBAR ---
+if 'shuffle' not in st.session_state: st.session_state.shuffle = False
+if 'folder' not in st.session_state: st.session_state.folder = "corridos tumbados"
 
 with st.sidebar:
-    st.title("MAYNEXUS ⚡")
-    carpetas = ["corridos tumbados", "bandas", "Regueton", "cristianas", "pop latino", "pop en español", "pop en ingles", "trance", "las mas sonadas"]
+    st.title("MAYNEXUS v19")
+    st.session_state.shuffle = st.toggle("🔀 MODO ALEATORIO", value=st.session_state.shuffle)
+    st.markdown("---")
     
-    for c in carpetas:
-        if st.button(f"📁 {c.upper()}", key=f"btn_{c}"):
-            st.session_state.folder = c
+    # Lista de carpetas/géneros
+    generos = ["corridos tumbados", "bandas", "Regueton", "cristianas", "pop latino", "pop en español", "pop en ingles", "trance", "las mas sonadas"]
+    for g in generos:
+        if st.button(f"📁 {g.upper()}", key=f"g_{g}"):
+            st.session_state.folder = g
             st.rerun()
 
-# --- MOTOR DE BÚSQUEDA CORREGIDO ---
+# --- BUSCADOR INTELIGENTE (FIX) ---
 st.header(f"Sección: {st.session_state.folder.upper()}")
 
 try:
-    # IMPORTANTE: El prefix debe terminar en '/' para asegurar que busque DENTRO de la carpeta
-    prefix_busqueda = f"{st.session_state.folder}/"
-    
-    with st.spinner(f"Escaneando {prefix_busqueda}..."):
-        # 1. Buscar Audios (Cloudinary los trata como 'video')
-        res_audio = cloudinary.api.resources(
-            type="upload", 
-            prefix=st.session_state.folder, # Intentamos con y sin barra
-            resource_type="video", 
-            max_results=500
-        )
-        canciones = res_audio.get('resources', [])
+    with st.spinner("Sincronizando flujo de datos..."):
+        # Buscamos en TODA la cuenta (sin prefix estricto) para rescatar tus archivos sueltos
+        # pero filtramos por los que contengan el nombre de la carpeta en su nombre
+        res_audio = cloudinary.api.resources(resource_type="video", max_results=500)
+        todas_las_canciones = res_audio.get('resources', [])
+        
+        # Filtramos: si el archivo está en la carpeta O si el nombre tiene palabras clave
+        canciones = [
+            c for c in todas_las_canciones 
+            if st.session_state.folder in c['public_id'].lower() or c['public_id'].startswith(st.session_state.folder)
+        ]
 
-        # 2. Buscar Imágenes
-        res_img = cloudinary.api.resources(
-            type="upload", 
-            prefix=st.session_state.folder, 
-            resource_type="image", 
-            max_results=500
-        )
+        # Si sigue sin salir nada, buscamos imágenes para las portadas
+        res_img = cloudinary.api.resources(resource_type="image", max_results=500)
         mapa_portadas = {img['public_id'].split('/')[-1]: img['secure_url'] for img in res_img.get('resources', [])}
 
     if canciones:
-        st.success(f"¡Encontradas {len(canciones)} canciones!")
+        if st.session_state.shuffle:
+            random.shuffle(canciones)
+            
         cols = st.columns(5)
         for i, cancion in enumerate(canciones):
             with cols[i % 5]:
-                # Limpiamos el ID para quitar la ruta de la carpeta del nombre visible
-                nombre_archivo = cancion['public_id'].split('/')[-1]
-                url_foto = mapa_portadas.get(nombre_archivo, "https://via.placeholder.com/300/111/00ff99?text=♫")
+                id_limpio = cancion['public_id'].split('/')[-1]
+                foto = mapa_portadas.get(id_limpio, "https://via.placeholder.com/300/111/00ff99?text=♫")
                 
                 st.markdown(f'''
                     <div class="song-card">
-                        <img src="{url_foto}" class="cover-art">
-                        <p style="font-size:12px; margin-top:5px; height:30px; overflow:hidden;">{nombre_archivo}</p>
+                        <img src="{foto}" class="cover-art">
+                        <p style="font-size:12px; font-weight:bold; height:30px; overflow:hidden; margin-top:5px;">{id_limpio}</p>
                     </div>
                 ''', unsafe_allow_html=True)
                 st.audio(cancion['secure_url'])
     else:
-        st.warning(f"No se detectaron archivos. Verifica que en Cloudinary la carpeta se llame exactamente: '{st.session_state.folder}'")
-        # Botón de ayuda para debug
-        if st.button("🔍 Ver qué hay en mi Cloudinary"):
-            all_res = cloudinary.api.resources(max_results=10)
-            st.write("Últimos 10 archivos subidos:", [r['public_id'] for r in all_res['resources']])
+        st.warning("No se encontraron coincidencias. Intenta renombrar tus archivos en Cloudinary incluyendo el género.")
 
 except Exception as e:
-    st.error(f"Error técnico: {e}")
+    st.error(f"Falla técnica: {e}")
